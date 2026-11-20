@@ -228,11 +228,14 @@ def indel_consensus(strelka_indel, mutect_indel):
     return consensus
 
 
-def write_vcf(consensus, vcf_output, counts_output, normal_id, tumor_id):
-    with open(vcf_output, 'a') as outfile, open(counts_output, 'a') as count_file:
+def write_headers(vcf_output, counts_output, normal_id, tumor_id):
+    with open(vcf_output, 'w') as outfile, open(counts_output, 'w') as count_file:
         outfile.write(consensus_vcf_header(tumor_id=tumor_id, normal_id=normal_id))
         count_file.write("chrom\tpos\tID\tTR\tTA\tTD\tNR\tNA\tND\n")
 
+
+def write_vcf(consensus, vcf_output, counts_output, normal_id, tumor_id):
+    with open(vcf_output, 'a') as outfile, open(counts_output, 'a') as count_file:
         for call in consensus:
             outstr = [call[0], str(call[1]), str(call[4]), call[2], call[3], str(call[5]), call[6], '.', 'RC:AC:DP',
                       '{}:{}:{}'.format(call[7], call[8], call[9]), '{}:{}:{}'.format(call[10], call[11], call[12])]
@@ -264,6 +267,8 @@ def consensus(
     tumor_id, normal_id = get_sample_ids(
         museq_snv_vcf, strelka_snv_vcf, strelka_indel_vcf, mutect_snv_vcf
     )
+
+    write_headers(consensus_vcf, counts_output, normal_id, tumor_id)
 
     for chromosome in chromosomes:
         museq_calls, _ = fetch_vcf(museq_snv_vcf, chromosome, 'museq_snv')
