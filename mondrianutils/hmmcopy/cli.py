@@ -117,7 +117,7 @@ def run_cell_hmmcopy(
 @click.option('--metrics')
 @click.option('--chromosomes', default=[str(v) for v in range(1, 23)] + ['X', 'Y'], multiple=True)
 @click.option('--output')
-@click.option('--sidebar_column', default='pick_met')
+@click.option('--sidebar_column', default='cell_call')
 @click.option('--disable_clustering', default=False, is_flag=True, help='Disable clustering')
 def heatmap(reads, metrics, chromosomes, output, sidebar_column, disable_clustering):
     mondrianutils.hmmcopy.plot_heatmap(
