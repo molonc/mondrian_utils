@@ -83,7 +83,7 @@ def check_common(x, df_db, calls):
 def get_common_calls(df, df_db):
     calls = {}
 
-    for i, row in df.iterrows():
+    for row in df.to_dict('records'):
         check_common(row, df_db, calls)
 
     new_groups = {}
