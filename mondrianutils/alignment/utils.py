@@ -149,7 +149,7 @@ def merge_bams(infiles, tempdir, ncores, outfile, reference, empty_bam_content):
         helpers.merge_bams(list(infiles.values()), outfile, tempdir, ncores)
 
     samtools_index(outfile)
-    igvtools_count(outfile, reference)
+    #igvtools_count(outfile, reference)
 
 
 def get_bam_header(bam):
