@@ -61,7 +61,7 @@ class CoverageMetrics(object):
         if start is not None:
             regions.append((start, i))
 
-        assert len(regions) > 0
+        # assert len(regions) > 0
         return regions
 
     def _filter_reads(self, read):

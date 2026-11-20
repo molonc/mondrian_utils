@@ -106,7 +106,7 @@ class GenHmmPlots(object):
         self.annotation_cols = kwargs.get('annotation_cols')
 
         if not self.annotation_cols:
-            self.annotation_cols = ['pick_met', 'condition',
+            self.annotation_cols = ['cell_call', 'experimental_condition',
                                     'sample_type', 'coverage_depth',
                                     'mad_neutral_state', 'MSRSI_non_integerness']
 

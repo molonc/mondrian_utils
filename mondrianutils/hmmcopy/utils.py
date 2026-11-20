@@ -79,7 +79,7 @@ def readcounter(
         _merge_wig(wig_files, os.path.join(outdir, f'{cell}.wig'), cell)
 
 
-def plot_heatmap(reads, metrics, chromosomes, output, sidebar_column='pick_met', disable_clustering=None):
+def plot_heatmap(reads, metrics, chromosomes, output, sidebar_column='cell_call', disable_clustering=None):
     plot = PlotPcolor(
         reads, metrics, output,
         column_name='state',

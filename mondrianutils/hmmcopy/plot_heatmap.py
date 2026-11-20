@@ -36,7 +36,7 @@ class PlotPcolor(object):
             max_cn=20,
             chromosomes=[str(v) for v in range(1, 23)] + ['X', 'Y'],
             mappability_threshold=0.9,
-            sidebar_column='pick_met',
+            sidebar_column='cell_call',
             scale_by_cells=False,
             disable_clustering=False
     ):

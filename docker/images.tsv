@@ -1,0 +1,12 @@
+# Mondrian images built from this repository, one per line:
+# <name>	<base image, pinned by digest>	<apt packages, or ->	<production image it replaces>
+#
+# Each base is upstream's public v0.1.0 image. The production images on
+# mondrian.azurecr.io are those same layers plus edits made by hand: the
+# mondrian_utils edits now in this repository, and procps in breakpoint_calling,
+# reinstalled here at the version installed in 2024.
+alignment	quay.io/mondrianscwgs/alignment:v0.1.0@sha256:28856f02177fab2a29bcb53b8b456a6055b34913c22cbecfa9a1ef2ff046e5a0	-	mondrian.azurecr.io/alignment:v_0_1_2
+hmmcopy	quay.io/mondrianscwgs/hmmcopy:v0.1.0@sha256:d368f1537a1006bd46fec28bd840eef7f413fd089506a5178868252956dd9c45	-	mondrian.azurecr.io/hmmcopy:v_0_1_1
+variant_calling	quay.io/mondrianscwgs/variant_calling:v0.1.0@sha256:15bd924e52f326bc333e51e03339123eb140d708a0d62a2b24d689218c2badc0	-	mondrian.azurecr.io/variant_calling:v_0_1_1
+breakpoint_calling	quay.io/mondrianscwgs/breakpoint_calling:v0.1.0@sha256:aeb5677531113c4d8a02291161ae4545063b19d984c0c48d6e32338d42086227	procps=2:3.3.15-2 libprocps7=2:3.3.15-2 psmisc=23.2-1+deb10u1	mondrian.azurecr.io/breakpoint_calling:v_0_1_2
+haplotype_calling	quay.io/mondrianscwgs/haplotype_calling:v0.1.0@sha256:251d018ef41804ed1fff5b7c3f83e271932914233b4e32198faa3357cc5f8912	-	mondrian.azurecr.io/haplotype_calling:v_0_1_0

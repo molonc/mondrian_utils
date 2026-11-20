@@ -130,7 +130,12 @@ class MultiVcfReader(object):
             except (KeyError, ValueError):
                 continue
 
-            iters.append(BufferedChromIter(chrom_iter))
+            buffered_iter = BufferedChromIter(chrom_iter)
+
+            # Skip iterators that exhausted on the first record (empty fetch);
+            # their record/coord are None and would break the min() in __iter__.
+            if buffered_iter.active:
+                iters.append(buffered_iter)
 
         return iters
 

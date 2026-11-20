@@ -68,8 +68,8 @@ def input_validation(meta_yaml, input_json):
     _check_metadata_required_field(meta_data, 'library_id')
     _check_metadata_required_field(meta_data, 'sample_id')
     # these are required in hmmcopy
-    _check_metadata_required_field(meta_data, 'pick_met')
-    _check_metadata_required_field(meta_data, 'condition')
+    _check_metadata_required_field(meta_data, 'cell_call')
+    _check_metadata_required_field(meta_data, 'experimental_condition')
 
     _check_sample_id_uniqueness(meta_data)
 
@@ -149,7 +149,7 @@ def merge_bams(infiles, tempdir, ncores, outfile, reference, empty_bam_content):
         helpers.merge_bams(list(infiles.values()), outfile, tempdir, ncores)
 
     samtools_index(outfile)
-    igvtools_count(outfile, reference)
+    #igvtools_count(outfile, reference)
 
 
 def get_bam_header(bam):

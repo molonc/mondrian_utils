@@ -1,0 +1,158 @@
+# Releases mondrian_utils and the Mondrian images built from it.
+#
+# Merging a PR that adds a `### vX.Y.Z+molonc.N` heading above the previous
+# release in CHANGELOG.md is the approval. The tag job tags the merge commit.
+# The image jobs rebuild every image in docker/images.tsv from that tag and
+# push it to ghcr.io. The publish job checks each image against the tag with
+# docker/verify.py and creates the GitHub Release. See MOLONC.md.
+#
+# GitHub does not start a workflow for a tag that GITHUB_TOKEN pushes, so the
+# tag job hands the tag to the later jobs directly.
+name: release
+
+on:
+  push:
+    branches: [main]
+    # A release is a changelog change; a push that leaves the file alone has
+    # nothing to release.
+    paths: [CHANGELOG.md]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      images: ${{ steps.images.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A changelog edit that adds no heading reaches this step too, so an
+      # existing tag is an ordinary case rather than a failure.
+      - name: Tag the release the changelog declares
+        id: tag
+        run: |
+          tag="$(grep -m1 -oE '^### v[0-9]+\.[0-9]+\.[0-9]+\+molonc\.[0-9]+$' CHANGELOG.md | cut -c5- || true)"
+          if [ -z "${tag}" ]; then
+            echo "::error::CHANGELOG.md has no ### vX.Y.Z+molonc.N heading"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
+            echo "${tag} already exists; this push released nothing"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${tag}" -m "${tag}"
+          git push origin "${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: List the images to build
+        id: images
+        run: echo "images=$(grep -vE '^(#|$)' docker/images.tsv | cut -f1 | jq -Rcs 'split("\n") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The first push creates each package from this workflow, which links it
+    # to this repository and lets GITHUB_TOKEN push later releases.
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        name: ${{ fromJSON(needs.tag.outputs.images) }}
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+      NAME: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+
+      # The alignment base image unpacks to more than a hosted runner's free
+      # disk; these preinstalled toolchains are unused here.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # A release image never changes once pushed. A failed release is replaced
+      # by the next +molonc.N, so an existing tag stops the run.
+      - name: Build and push the release image
+        run: |
+          base="$(awk -F'\t' -v name="${NAME}" '$1 == name { print $2 }' docker/images.tsv)"
+          apt_packages="$(awk -F'\t' -v name="${NAME}" '$1 == name && $3 != "-" { print $3 }' docker/images.tsv)"
+          if [[ "${base}" != *@sha256:* ]]; then
+            echo "::error::docker/images.tsv base for ${NAME} is not pinned by digest: ${base}"
+            exit 1
+          fi
+          image="ghcr.io/molonc/mondrian_utils/${NAME}:${TAG/+/-}"
+          if docker manifest inspect "${image}" > /dev/null 2>&1; then
+            echo "::error::${image} already exists"
+            exit 1
+          fi
+          docker build --platform linux/amd64 --provenance=false \
+            --file docker/Dockerfile \
+            --build-arg "BASE_IMAGE=${base}" \
+            --build-arg "APT_PACKAGES=${apt_packages}" \
+            --build-arg "MONDRIAN_UTILS_COMMIT=$(git rev-parse HEAD)" \
+            --build-arg "MONDRIAN_UTILS_VERSION=${TAG}" \
+            --tag "${image}" docker
+          docker push "${image}"
+
+  publish:
+    needs: [tag, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Verify each image holds exactly this release
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: python3 docker/verify.py "${TAG}"
+
+      # Written to a file so that backticks, quotes and $ in the changelog
+      # reach gh verbatim.
+      - name: Extract the changelog section
+        run: |
+          awk -v heading="### ${TAG}" '
+            $0 == heading { found = 1; next }
+            found && /^### / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no entries under ### ${TAG}"
+            exit 1
+          fi
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${TAG}" --title "${TAG}" --notes-file release-notes.md
